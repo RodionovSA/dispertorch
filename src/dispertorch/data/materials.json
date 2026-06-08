@@ -1,0 +1,113 @@
+{
+  "Au": {
+    "rakic-ld": {
+      "model": "Composite",
+      "source": "Rakic et al., Appl. Opt. 37, 5271 (1998), Lorentz-Drude",
+      "range_um": [0.2, 12.4],
+      "terms": [
+        {"model": "ConstantEps", "eps_re": 1.0},
+        {"model": "Drude",   "omega_p": 7.872171, "gamma": 0.053},
+        {"model": "Lorentz", "A": 1.956982,   "omega_0": 0.415,  "gamma": 0.241},
+        {"model": "Lorentz", "A": 0.815409,   "omega_0": 0.83,   "gamma": 0.345},
+        {"model": "Lorentz", "A": 5.789404,   "omega_0": 2.969,  "gamma": 0.87},
+        {"model": "Lorentz", "A": 49.006081,  "omega_0": 4.304,  "gamma": 2.494},
+        {"model": "Lorentz", "A": 357.475306, "omega_0": 13.32,  "gamma": 2.214}
+      ]
+    }
+  },
+  "Ag": {
+    "rakic-ld": {
+      "model": "Composite",
+      "source": "Rakic et al., Appl. Opt. 37, 5271 (1998), Lorentz-Drude",
+      "range_um": [0.2, 12.4],
+      "terms": [
+        {"model": "ConstantEps", "eps_re": 1.0},
+        {"model": "Drude",   "omega_p": 8.282342,  "gamma": 0.048},
+        {"model": "Lorentz", "A": 5.276706,   "omega_0": 0.816,  "gamma": 3.886},
+        {"model": "Lorentz", "A": 10.066332,  "omega_0": 4.481,  "gamma": 0.452},
+        {"model": "Lorentz", "A": 0.892981,   "omega_0": 8.185,  "gamma": 0.065},
+        {"model": "Lorentz", "A": 68.191284,  "omega_0": 9.083,  "gamma": 0.916},
+        {"model": "Lorentz", "A": 458.342845, "omega_0": 20.29,  "gamma": 2.419}
+      ]
+    }
+  },
+  "Cu": {
+    "rakic-ld": {
+      "model": "Composite",
+      "source": "Rakic et al., Appl. Opt. 37, 5271 (1998), Lorentz-Drude",
+      "range_um": [0.2, 12.4],
+      "terms": [
+        {"model": "ConstantEps", "eps_re": 1.0},
+        {"model": "Drude",   "omega_p": 8.212254,  "gamma": 0.03},
+        {"model": "Lorentz", "A": 7.154623,   "omega_0": 0.291,  "gamma": 0.378},
+        {"model": "Lorentz", "A": 12.198046,  "omega_0": 2.957,  "gamma": 1.056},
+        {"model": "Lorentz", "A": 84.799875,  "omega_0": 5.3,    "gamma": 3.213},
+        {"model": "Lorentz", "A": 74.830318,  "omega_0": 11.18,  "gamma": 4.305}
+      ]
+    }
+  },
+  "Al": {
+    "rakic-ld": {
+      "model": "Composite",
+      "source": "Rakic et al., Appl. Opt. 37, 5271 (1998), Lorentz-Drude",
+      "range_um": [0.2, 12.4],
+      "terms": [
+        {"model": "ConstantEps", "eps_re": 1.0},
+        {"model": "Drude",   "omega_p": 10.833347, "gamma": 0.047},
+        {"model": "Lorentz", "A": 50.938891,  "omega_0": 0.162,  "gamma": 0.333},
+        {"model": "Lorentz", "A": 11.22002,   "omega_0": 1.544,  "gamma": 0.312},
+        {"model": "Lorentz", "A": 37.250466,  "omega_0": 1.808,  "gamma": 1.351},
+        {"model": "Lorentz", "A": 6.732012,   "omega_0": 3.473,  "gamma": 3.382}
+      ]
+    }
+  },
+  "SiO2": {
+    "malitson": {
+      "model": "Sellmeier",
+      "source": "I. H. Malitson, J. Opt. Soc. Am. 55, 1205 (1965); fused silica, 293 K",
+      "range_um": [0.21, 6.7],
+      "B": [0.6961663, 0.4079426, 0.8974794],
+      "C": [0.00467914635, 0.013512063, 97.934003]
+    }
+  },
+  "Si3N4": {
+    "luke": {
+      "model": "Sellmeier",
+      "source": "K. Luke et al., Opt. Lett. 40, 4823 (2015); stoichiometric LPCVD Si3N4",
+      "range_um": [0.31, 5.504],
+      "B": [3.0249, 40314.0],
+      "C": [0.018317078, 1537208.18]
+    }
+  },
+  "cSi": {
+    "salzberg": {
+      "model": "Sellmeier",
+      "source": "C. D. Salzberg and J. J. Villa, J. Opt. Soc. Am. 47, 244 (1957); crystalline Si, IR transparency window only (1.36–11 µm, lossless; not valid in the visible where c-Si absorbs)",
+      "range_um": [1.36, 11.0],
+      "B": [10.6684293, 0.0030434748, 1.54133408],
+      "C": [0.090912191, 1.287660166, 1218816.0]
+    }
+  },
+  "TiO2": {
+    "devore-o": {
+      "model": "Composite",
+      "source": "J. R. Devore, J. Opt. Soc. Am. 41, 416 (1951); rutile, ordinary ray. Formula n² = 5.913 + 0.2441/(λ² − 0.0803) rewritten as ConstantEps + Sellmeier.",
+      "range_um": [0.43, 1.53],
+      "terms": [
+        {"model": "ConstantEps", "eps_re": 1.87314944},
+        {"model": "Sellmeier", "B": [3.039850561], "C": [0.0803]}
+      ]
+    }
+  },
+  "aSi": {
+    "jellison-modine": {
+      "model": "Composite",
+      "source": "G. E. Jellison and F. A. Modine, Appl. Phys. Lett. 69, 371 (1996) + erratum ibid. 2137; representative single-oscillator Tauc-Lorentz fit for a-Si (parameters are sample-dependent)",
+      "range_um": [0.25, 1.0],
+      "terms": [
+        {"model": "ConstantEps", "eps_re": 1.15},
+        {"model": "TaucLorentz", "A": 122.0, "omega_0": 3.45, "gamma": 2.54, "E_g": 1.20}
+      ]
+    }
+  }
+}
