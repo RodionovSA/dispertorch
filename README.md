@@ -61,7 +61,7 @@ eps    = au.permittivity(wl)              # complex64; eps.imag >= 0
 
 | Class | Parameters | ε(E) |
 |---|---|---|
-| `ConstantIndex(n, k=0)` | n, k (dimensionless) | (n + ik)² |
+| `ConstantIndex(n, k=0)` | n, k (dimensionless); stored as `n0`/`k0` | (n + ik)² |
 | `ConstantEps(eps_re, eps_im=0)` | ε_re, ε_im (dimensionless) | ε_re + iε_im |
 | `Drude(omega_p, gamma)` | ωp [eV], γ [eV] | −ωp² / (E² + iγE) |
 | `Lorentz(A, omega_0, gamma)` | A [eV²], ω₀ [eV], γ [eV] | A / (ω₀² − E² − iγE) |
@@ -80,10 +80,11 @@ wavelength input is still nm.
 from dispertorch import material, list_materials
 
 print(list_materials())
-# {'Au': ['rakic-ld'], 'Ag': ['rakic-ld'], 'Cu': ['rakic-ld'], 'Al': ['rakic-ld'],
+# {'air': ['unity'], 'Au': ['rakic-ld'], 'Ag': ['rakic-ld'], 'Cu': ['rakic-ld'], 'Al': ['rakic-ld'],
 #  'SiO2': ['malitson'], 'Si3N4': ['luke'], 'cSi': ['salzberg'],
 #  'TiO2': ['devore-o'], 'aSi': ['jellison-modine']}
 
+air  = material("air")                     # n = 1 exactly
 au   = material("Au")                      # Rakić 1998 LD preset
 sio2 = material("SiO2")                   # Malitson 1965 Sellmeier
 si3n4 = material("Si3N4", source="luke")  # Luke 2015 Sellmeier
@@ -91,6 +92,7 @@ si3n4 = material("Si3N4", source="luke")  # Luke 2015 Sellmeier
 
 | Material | Source | Model | Notes |
 |---|---|---|---|
+| `"air"` | — | `ConstantIndex` | n = 1 exactly (ambient/vacuum) |
 | `"Au"`, `"Ag"`, `"Cu"`, `"Al"` | Rakić 1998 | `ConstantEps + Drude + Lorentz×N` | metals, 0.2–12.4 µm |
 | `"SiO2"` | Malitson 1965 | `Sellmeier` (3-term) | fused silica, 0.21–6.7 µm |
 | `"Si3N4"` | Luke 2015 | `Sellmeier` (2-term) | LPCVD, 0.31–5.5 µm |

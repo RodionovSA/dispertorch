@@ -33,15 +33,19 @@ class ConstantIndex(DispersionModel):
 
     Permittivity is ``N**2``. Pass ``k`` for an absorbing constant material;
     the default ``k = 0`` is the lossless case, e.g. ``ConstantIndex(1.5)``.
+
+    The stored constants live under ``nc``/``kc`` (also the ``state_dict``
+    keys), since the base class reserves ``n``/``k`` as the derived
+    ``n(wl)``/``k(wl)`` accessors. Constructor arguments stay ``n``/``k``.
     """
 
     def __init__(self, n, k=0.0, dtype=torch.float32):
         super().__init__()
-        register(self, "n", n, dtype)
-        register(self, "k", k, dtype)
+        register(self, "nc", n, dtype)
+        register(self, "kc", k, dtype)
 
     def permittivity(self, wl: Tensor) -> Tensor:
-        N = self.n + 1j * self.k
+        N = self.nc + 1j * self.kc
         return (N * N) * torch.ones_like(wl)
 
 

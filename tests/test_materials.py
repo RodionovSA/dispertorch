@@ -5,6 +5,7 @@ import pytest
 
 from dispertorch import material, list_materials
 from dispertorch.base import Composite
+from dispertorch.constant import ConstantIndex
 
 WL_VIS  = torch.linspace(400.0,  800.0, 100)   # visible, nm
 WL_WIDE = torch.linspace(300.0, 1200.0, 200)   # wider sweep, nm
@@ -156,16 +157,34 @@ def test_asi_finite():
     assert torch.isfinite(n).all() and torch.isfinite(k).all()
 
 
+# ── Air ────────────────────────────────────────────────────────────────────
+
+def test_air_builds_as_constant_index():
+    """material('air') must return a ConstantIndex."""
+    assert isinstance(material("air"), ConstantIndex)
+
+
+def test_air_is_unity_lossless():
+    """Air (unity source) must have n == 1 and k == 0 everywhere."""
+    m = material("air")
+    n, k = m.nk(WL_WIDE)
+    torch.testing.assert_close(n, torch.ones_like(WL_WIDE))
+    torch.testing.assert_close(k, torch.zeros_like(WL_WIDE))
+    eps = m.permittivity(WL_WIDE)
+    torch.testing.assert_close(eps, torch.ones_like(WL_WIDE, dtype=torch.complex64))
+
+
 # ── list_materials ────────────────────────────────────────────────────────────
 
 def test_list_materials_contains_all():
     lm = list_materials()
-    for name in ["Au", "Ag", "Cu", "Al", "SiO2", "Si3N4", "cSi", "TiO2", "aSi"]:
+    for name in ["air", "Au", "Ag", "Cu", "Al", "SiO2", "Si3N4", "cSi", "TiO2", "aSi"]:
         assert name in lm, f"{name} missing from list_materials()"
 
 
 def test_list_materials_source_keys():
     lm = list_materials()
+    assert lm["air"]  == ["unity"]
     assert lm["SiO2"] == ["malitson"]
     assert lm["cSi"]  == ["salzberg"]
     assert lm["aSi"]  == ["jellison-modine"]

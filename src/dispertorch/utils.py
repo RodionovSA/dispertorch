@@ -29,6 +29,12 @@ def register(module: nn.Module, name: str, value, dtype=torch.float32) -> None:
     otherwise it is stored as a (non-gradient) buffer that still moves
     with .to() and is saved in state_dict().
     """
+    if hasattr(type(module), name):
+        raise ValueError(
+            f"coefficient name {name!r} shadows an existing attribute of "
+            f"{type(module).__name__} (DispersionModel reserves n/k/nk/index/"
+            f"permittivity/forward). Pick a different name, e.g. {name!r} + '0'."
+        )
     if isinstance(value, nn.Parameter):
         if value.dtype != dtype:
             value = nn.Parameter(value.detach().to(dtype),
