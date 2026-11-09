@@ -26,7 +26,7 @@ cd dispertorch
 
 # with pip
 pip install -e ".[dev]"
-pytest          # 36 tests
+pytest
 
 # with uv
 uv sync --extra dev
@@ -99,6 +99,54 @@ si3n4 = material("Si3N4", source="luke")  # Luke 2015 Sellmeier
 | `"cSi"` | Salzberg & Villa 1957 | `Sellmeier` (3-term) | **IR only** 1.36–11 µm; lossless |
 | `"TiO2"` | Devore 1951 | `ConstantEps + Sellmeier` | rutile ordinary ray, 0.43–1.53 µm |
 | `"aSi"` | Jellison & Modine 1996 | `ConstantEps + TaucLorentz` | representative fit; params are sample-dependent |
+
+## Planar multilayers
+
+`Stack` computes reflection/transmission of an isotropic planar stack
+`ambient | films… | substrate` with recursive Fresnel (Airy) coefficients — stable for
+thick absorbing and evanescent layers, differentiable w.r.t. both model coefficients
+and thicknesses.
+
+```python
+import torch, torch.nn as nn
+from dispertorch import Stack, Layer, material
+
+wl    = torch.linspace(400, 900, 300, dtype=torch.float64)   # nm
+theta = torch.deg2rad(torch.tensor(70.0, dtype=torch.float64))
+
+stack = Stack(
+    material("air"),
+    [Layer(material("Si3N4"), nn.Parameter(torch.tensor(80.0))),  # fittable thickness, nm
+     (material("SiO2"), 300.0)],                                  # (model, d_nm) also works
+    material("aSi"),
+).double()
+
+res = stack(wl, theta)
+res.Rs, res.Rp, res.Ts, res.Tp        # power R/T per polarization
+res.R, res.T, res.A                   # unpolarized
+res.rs, res.rp, res.ts, res.tp        # complex amplitudes (E-field)
+res.psi, res.delta                    # ellipsometry, radians: rp/rs = tan(psi) e^{i delta}
+```
+
+`wl` and `theta` broadcast: `stack(wl[:, None], theta[None, :])` returns `(n_wl, n_theta)` maps.
+
+**Incoherent substrate.** For thick substrates (wafers, glass slides) pass
+`substrate_thickness` (nm); multiple reflections inside it add in intensity and light
+exits into `exit_medium` (default n = 1):
+
+```python
+slide = Stack(material("air"), [(material("TiO2"), 60.0)], material("SiO2"),
+              substrate_thickness=1e6)              # 1 mm glass
+res = slide(wl)                                       # R, T include backside reflection
+```
+
+Amplitudes and `psi`/`delta` are not defined in this mode (the reflected beam is
+partially depolarized) and raise `ValueError`.
+
+**Conventions.** Angle in radians in the ambient (which should be transparent).
+`r_p = (n₂cosθ₁ − n₁cosθ₂)/(n₂cosθ₁ + n₁cosθ₂)`, so `r_p = −r_s` and Δ = 180° at normal
+incidence. With this library's `exp(−iωt)`, n + ik convention, tools that use n − ik
+report `conj(ρ)`, i.e. −Δ.
 
 ## Gradient-based fitting
 
