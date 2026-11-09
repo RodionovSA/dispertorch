@@ -148,28 +148,61 @@ partially depolarized) and raise `ValueError`.
 incidence. With this library's `exp(−iωt)`, n + ik convention, tools that use n − ik
 report `conj(ρ)`, i.e. −Δ.
 
-## Gradient-based fitting
+## Fitting
 
-Wrap any coefficient in `nn.Parameter` to make it optimizable:
+Wrap any coefficient or thickness in `nn.Parameter` to make it free, describe each
+dataset as a `Measurement`, and call `fit`. Datasets can mix quantities and angles —
+e.g. ellipsometry at 65/70/75° together with normal-incidence R:
 
 ```python
 import torch, torch.nn as nn
-from dispertorch import ConstantEps, Lorentz
+from dispertorch import Stack, Layer, Cauchy, Measurement, fit, material
 
-model = ConstantEps(nn.Parameter(torch.tensor(1.5))) + Lorentz(
-    A=nn.Parameter(torch.tensor(2.0)),
-    omega_0=nn.Parameter(torch.tensor(2.5)),
-    gamma=nn.Parameter(torch.tensor(0.3)),
-)
+P = lambda v: nn.Parameter(torch.tensor(v))
+stack = Stack(material("air"),
+              [Layer(Cauchy(P(1.5), P(0.004)), P(230.0))],   # A, B [µm²], d [nm]
+              material("aSi"))
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-for _ in range(500):
-    optimizer.zero_grad()
-    n, k = model.nk(wl_fit)
-    loss = ((n - n_target)**2 + (k - k_target)**2).mean()
-    loss.backward()
-    optimizer.step()
+wl  = torch.linspace(400, 1000, 61)           # nm
+ang = torch.tensor([65.0, 70.0, 75.0])        # deg
+
+measurements = [
+    # variable-angle data: wl[:, None] x theta[None, :] -> data shape (61, 3)
+    Measurement("psi",   wl[:, None], psi_data,   ang[None, :], sigma=0.02, degrees=True),
+    Measurement("delta", wl[:, None], delta_data, ang[None, :], sigma=0.05, degrees=True),
+    Measurement("R",     wl,          R_data,     0.0,          sigma=1e-3),
+]
+
+res = fit(stack, measurements,
+          method="lm",                 # "lm" (default) | "lbfgs" | "adam"
+          max_iter=200, tol=1e-10,
+          bounds={"layers.0.d": (0, None)})
+print(res.summary())                   # values, standard errors, reduced chi²
 ```
+
+| Option | Meaning |
+|---|---|
+| `kind` | Stack: `R Rs Rp T Ts Tp A As Ap psi delta`; DispersionModel: `n k eps1 eps2`; or a callable `f(system, wl, theta)` |
+| `sigma` | per-point uncertainty in data units — sets relative weights between datasets and makes `stderr` meaningful |
+| `degrees` | `theta`, `psi`, `delta` in degrees (default radians); `delta` residuals are wrapped to ±180° |
+| `params` | subset of parameters to fit (objects or names like `"layers.0.d"`); default: all with `requires_grad` |
+| `bounds` | `{param_or_name: (low, high)}`, enforced by projection |
+| `dtype` | working precision: float64 by default (float32 on Apple MPS, which has no float64), regardless of the system's dtype |
+| `lr` | Adam only, as a *relative* step (`1e-2` ≈ 1 % per step) |
+
+**Devices.** The fit runs on the device of the system's parameters (`stack.to("cuda")`,
+`.to("mps")`); measurement arrays can live anywhere and are moved there. Parameters
+are written back on their own device/dtype; `FitResult` summaries are returned on CPU.
+
+Parameters are updated **in place**. `FitResult` holds `params`, `stderr`, `correlation`,
+`reduced_chi2`, per-measurement `residuals` and the χ² `history`.
+
+**Which method?** Levenberg–Marquardt (`"lm"`, Jacobian via `torch.func.jacfwd`) is the
+right tool for these small, ill-conditioned least-squares problems — typically ~10
+iterations. `"lbfgs"` is a reasonable alternative; `"adam"` is available but needs
+thousands of iterations here and is meant for larger, noisy pipelines. Thickness and
+oscillator fits have local minima: start from sensible values (presets, known nominal
+thickness) or run a few starting points.
 
 See **`example.ipynb`** for a full demo with plots, loss curves, and comparison to
 ground truth. The notebook also covers single-oscillator sweeps, the preset gallery,

@@ -3,6 +3,7 @@
 from .base import Composite, DispersionModel
 from .constant import ConstantEps, ConstantIndex
 from .data import list_materials, material
+from .fit import FitResult, Measurement, fit
 from .oscillator import Drude, Lorentz, TaucLorentz
 from .stack import Layer, Stack, StackResult
 from .transparent import Cauchy, Sellmeier
@@ -26,6 +27,10 @@ __all__ = [
     "Layer",
     "Stack",
     "StackResult",
+    # fitting
+    "Measurement",
+    "FitResult",
+    "fit",
     # material presets
     "list_materials",
     "material",
