@@ -6,7 +6,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from dispertorch import (Cauchy, ConstantEps, ConstantIndex, Layer, Lorentz, Measurement,
+from dispertorch import (Cauchy, CauchyUrbach, ConstantEps, ConstantIndex, Layer, Lorentz, Measurement,
                          Stack, fit)
 
 F64 = torch.float64
@@ -75,6 +75,52 @@ class TestRecovery:
                model.terms[1].gamma]
         for g_, t in zip(got, [2.0, 4.0, 4.5, 0.4]):
             assert g_.item() == pytest.approx(t, rel=1e-6)
+
+    def test_lm_cauchy_urbach_nk(self):
+        """Recover Cauchy + Urbach coefficients from n, k with E_band held fixed."""
+        truth_v = {"A": 1.85, "B": 0.012, "C": 2e-4, "k_amp": 0.02, "k_exp": 1.8}
+        truth = CauchyUrbach(**truth_v, E_band=3.1, dtype=F64)
+        with torch.no_grad():
+            n, k = truth.nk(WL)
+        model = CauchyUrbach(P(1.7), P(0.008), P(0.0), P(0.005), P(1.0),
+                             E_band=3.1, dtype=F64)
+        res = fit(model, [Measurement("n", WL, n, sigma=1e-3),
+                          Measurement("k", WL, k, sigma=1e-4)],
+                  bounds={"k_amp": (0.0, None), "k_exp": (1e-3, None)})
+        assert res.success, res.message
+        assert "E_band" not in res.params
+        for name, v in truth_v.items():
+            assert getattr(model, name).item() == pytest.approx(v, rel=1e-6), name
+        assert res.cost < 1e-12
+
+    def test_lm_stack_cauchy_urbach_film(self):
+        """Weakly absorbing film on Si: recover d, Cauchy and Urbach from VASE + R."""
+        def stack_of(d, A, B, ka, ke):
+            film = CauchyUrbach(A, B, k_amp=ka, k_exp=ke, E_band=3.1, dtype=F64)
+            return Stack(ConstantIndex(1.0, dtype=F64), [Layer(film, d)],
+                         ConstantIndex(3.88, 0.02, dtype=F64))
+
+        truth = stack_of(300.0, 1.9, 0.015, 0.03, 1.5)
+        with torch.no_grad():
+            r = truth(WL[:, None], torch.deg2rad(ANGLES_DEG)[None, :])
+            R = truth(WL, 0.0).R
+        meas = [
+            Measurement("psi", WL[:, None], torch.rad2deg(r.psi), ANGLES_DEG[None, :],
+                        sigma=0.1, degrees=True),
+            Measurement("delta", WL[:, None], torch.rad2deg(r.delta), ANGLES_DEG[None, :],
+                        sigma=0.1, degrees=True),
+            Measurement("R", WL, R, 0.0, sigma=1e-3),
+        ]
+        stack = stack_of(P(290.0), P(1.85), P(0.012), P(0.02), P(1.2))
+        res = fit(stack, meas, bounds={"layers.0.model.k_amp": (0.0, None),
+                                       "layers.0.model.k_exp": (1e-3, None)})
+        assert res.success, res.message
+        film = stack.layers[0].model
+        got = {"d": stack.layers[0].d, "A": film.A, "B": film.B,
+               "k_amp": film.k_amp, "k_exp": film.k_exp}
+        want = {"d": 300.0, "A": 1.9, "B": 0.015, "k_amp": 0.03, "k_exp": 1.5}
+        for name, v in want.items():
+            assert got[name].item() == pytest.approx(v, rel=1e-6), name
 
     def test_eps_kinds(self):
         truth = Lorentz(4.0, 4.5, 0.4, dtype=F64)

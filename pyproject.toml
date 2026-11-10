@@ -1,6 +1,6 @@
 [project]
 name = "dispertorch"
-version = "0.1.1"
+version = "0.1.2"
 description = "Differentiable refractive-index dispersion models built on PyTorch nn.Module"
 readme = "README.md"
 requires-python = ">=3.12"

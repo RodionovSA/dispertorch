@@ -6,7 +6,7 @@ from .data import list_materials, material
 from .fit import FitResult, Measurement, fit
 from .oscillator import Drude, Lorentz, TaucLorentz
 from .stack import Layer, Stack, StackResult
-from .transparent import Cauchy, Sellmeier
+from .transparent import Cauchy, CauchyUrbach, Sellmeier
 from .utils import MODEL_REGISTRY, register, register_model
 
 __all__ = [
@@ -22,6 +22,7 @@ __all__ = [
     "TaucLorentz",
     # transparent / empirical
     "Cauchy",
+    "CauchyUrbach",
     "Sellmeier",
     # planar multilayers
     "Layer",

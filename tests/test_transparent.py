@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from dispertorch import Cauchy, Sellmeier
+from dispertorch import Cauchy, CauchyUrbach, Sellmeier
 from dispertorch.utils import MODEL_REGISTRY
 
 WL = torch.linspace(400.0, 800.0, 200)   # visible sweep, nm
@@ -134,8 +134,73 @@ class TestSellmeier:
         assert torch.isfinite(n).all()
 
 
+# ── Cauchy-Urbach ─────────────────────────────────────────────────────────
+
+HC = 1239.841984  # eV·nm
+
+
+class TestCauchyUrbach:
+    def test_zero_amp_reduces_to_cauchy(self):
+        """With k_amp = 0 the model must equal plain Cauchy."""
+        cu = CauchyUrbach(A=1.50, B=4.0e-3, C=1.0e-6, k_exp=1.5)
+        c = Cauchy(A=1.50, B=4.0e-3, C=1.0e-6)
+        torch.testing.assert_close(cu.permittivity(WL), c.permittivity(WL))
+        assert (cu.k(WL).abs() < 1e-6).all()
+
+    def test_n_and_k_are_exact(self):
+        """n is exactly Cauchy and k is exactly the Urbach exponential."""
+        wl = WL.double()
+        A, B, C, ka, ke, Eb = 1.6, 5e-3, 2e-5, 0.02, 1.3, 3.2
+        m = CauchyUrbach(A, B, C, k_amp=ka, k_exp=ke, E_band=Eb, dtype=torch.float64)
+        lam = wl * 1e-3
+        n_ref = A + B / lam**2 + C / lam**4
+        k_ref = ka * torch.exp(ke * (HC / wl - Eb))
+        n, k = m.nk(wl)
+        torch.testing.assert_close(n, n_ref)
+        torch.testing.assert_close(k, k_ref)
+
+    def test_k_equals_amp_at_band_edge(self):
+        m = CauchyUrbach(A=1.5, B=4e-3, k_amp=0.01, k_exp=2.0, E_band=3.0,
+                         dtype=torch.float64)
+        k = m.k(torch.tensor([HC / 3.0], dtype=torch.float64))
+        torch.testing.assert_close(k, torch.tensor([0.01], dtype=torch.float64))
+
+    def test_default_band_edge_is_400nm(self):
+        m = CauchyUrbach(A=1.5, B=4e-3, k_amp=0.01, k_exp=2.0, dtype=torch.float64)
+        k = m.k(torch.tensor([400.0], dtype=torch.float64))
+        torch.testing.assert_close(k, torch.tensor([0.01], dtype=torch.float64))
+
+    def test_absorption_decays_with_wavelength(self):
+        """For k_exp > 0, k increases monotonically towards short wavelengths."""
+        m = CauchyUrbach(A=1.5, B=4e-3, k_amp=0.01, k_exp=1.5)
+        k = m.k(WL)
+        assert (k > 0).all()
+        assert (k.diff() < 0).all()
+
+    def test_absorbing_sign_convention(self):
+        """eps'' >= 0 for absorption (library-wide convention)."""
+        m = CauchyUrbach(A=1.5, B=4e-3, k_amp=0.05, k_exp=1.5)
+        assert (m.permittivity(WL).imag > 0).all()
+
+    def test_gradient_flows_to_all_params(self):
+        names = ("A", "B", "C", "k_amp", "k_exp")
+        vals = (1.5, 4e-3, 1e-5, 0.01, 1.5)
+        m = CauchyUrbach(*(nn.Parameter(torch.tensor(v)) for v in vals))
+        n, k = m.nk(WL)
+        (n.sum() + k.sum()).backward()
+        for name in names:
+            g = getattr(m, name).grad
+            assert g is not None and torch.isfinite(g).all() and g.abs() > 0, name
+
+    def test_scalar_args_are_buffers(self):
+        m = CauchyUrbach(A=1.5, B=4e-3, k_amp=0.01)
+        assert len(list(m.parameters())) == 0
+        assert {"A", "B", "C", "k_amp", "k_exp", "E_band"} <= set(m.state_dict())
+
+
 # ── Registry ───────────────────────────────────────────────────────────────
 
 def test_registry():
     assert "Cauchy" in MODEL_REGISTRY
     assert "Sellmeier" in MODEL_REGISTRY
+    assert MODEL_REGISTRY["CauchyUrbach"] is CauchyUrbach
